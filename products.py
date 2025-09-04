@@ -1,0 +1,7 @@
+client = iop.IopClient(url, appkey ,appSecret)
+request = iop.IopRequest('/auth/token/create')
+request.add_api_param('code', '0_100132_2DL4DV3jcU1UOT7WGI1A4rY91')
+request.add_api_param('uuid', '1')
+response = client.execute(request)
+print(response.type)
+print(response.body)
