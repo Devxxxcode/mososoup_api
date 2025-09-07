@@ -177,13 +177,13 @@ def invalidate_package_cache():
 def invalidate_user_notifications_cache(user_id=None):
     """Invalidate user notification cache"""
     if user_id:
-        invalidate_cache_pattern(f"user_notifications:{user_id}*")
+        invalidate_cache_pattern(f"notifications:{user_id}*")
     else:
-        invalidate_cache_pattern("user_notifications:*")
+        invalidate_cache_pattern("notifications:*")
 
 def invalidate_admin_notifications_cache():
     """Invalidate admin notification cache"""
-    invalidate_cache_pattern("admin_notifications:*")
+    invalidate_cache_pattern("notifications:admin*")
 
 def invalidate_all_notifications_cache():
     """Invalidate all notification cache"""
