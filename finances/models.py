@@ -137,10 +137,10 @@ class Withdrawal(models.Model):
                 f"All {total_play} submission{'s' if total_play > 1 else ''} must be completed"
                 f"before you are able to withdraw."
             )
-        if user.number_of_submission_set_today < pack.number_of_set:
+        if number_of_play < pack.daily_missions:
             return False, (
-                f"All {pack.number_of_set} submission{'s' if pack.number_of_set > 1 else ''} set must be completed"
-                f"before you are able to withdraw."
+                f"All {pack.daily_missions} mission{'s' if pack.daily_missions > 1 else ''} must be completed"
+                f" before you are able to withdraw."
             )
         total_withdrawal_for_today = cls.total_count_of_today_withdrawal(user)
         if total_withdrawal_for_today >= max_no_of_withdrawal:
