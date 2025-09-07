@@ -1,5 +1,10 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from notification.models import Notification
+from shared.cache_utils import invalidate_user_notifications_cache, invalidate_admin_notifications_cache
+
+if TYPE_CHECKING:
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
 
 def create_user_notification(user: "User", title: Optional[str] = None, message: str = "", type: str = Notification.USER) -> Notification:
     """
@@ -30,6 +35,10 @@ def create_user_notification(user: "User", title: Optional[str] = None, message:
         message=message,
         type=type
     )
+    
+    # Invalidate user notification cache
+    invalidate_user_notifications_cache(user.id)
+    
     return notification
 
 
@@ -59,4 +68,8 @@ def create_admin_notification(title: Optional[str] = None, message: str = "", ty
         message=message,
         type=type
     )
+    
+    # Invalidate admin notification cache
+    invalidate_admin_notifications_cache()
+    
     return notification

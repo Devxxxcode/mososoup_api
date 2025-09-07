@@ -9,6 +9,10 @@ from .serializers import PackSerializer
 from shared.mixins import StandardResponseMixin
 from rest_framework.response import Response
 from shared.helpers import create_admin_log
+from shared.cache_utils import (
+    cache_result, invalidate_package_cache, 
+    get_packages_cache_key
+)
 
 
 class PackViewSet(StandardResponseMixin, ModelViewSet):
@@ -19,6 +23,16 @@ class PackViewSet(StandardResponseMixin, ModelViewSet):
     serializer_class = PackSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
+    @cache_result('PACKAGES', 'all')  # Literal string "all"
+    def list(self, request, *args, **kwargs):
+        """List all packages with caching"""
+        return super().list(request, *args, **kwargs)
+
+    @cache_result('PACKAGES', ['pk'])  # Cache by pack ID (pk in kwargs)
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve a specific package with caching"""
+        return super().retrieve(request, *args, **kwargs)
 
     def get_serializer_context(self):
         # Add request to the serializer context
@@ -37,6 +51,8 @@ class PackViewSet(StandardResponseMixin, ModelViewSet):
 
     def perform_create(self, serializer):
         pack = serializer.save()
+        # Invalidate package cache after creation
+        invalidate_package_cache()
         try:
             create_admin_log(self.request, f"Created pack '{pack.name}' (USD {pack.usd_value})")
         except Exception:
@@ -44,6 +60,8 @@ class PackViewSet(StandardResponseMixin, ModelViewSet):
 
     def perform_update(self, serializer):
         pack = serializer.save()
+        # Invalidate package cache after update
+        invalidate_package_cache()
         try:
             state = "active" if pack.is_active else "inactive"
             create_admin_log(self.request, f"Updated pack '{pack.name}' (USD {pack.usd_value}), now {state}")
@@ -54,11 +72,14 @@ class PackViewSet(StandardResponseMixin, ModelViewSet):
         name = instance.name
         usd = instance.usd_value
         super().perform_destroy(instance)
+        # Invalidate package cache after deletion
+        invalidate_package_cache()
         try:
             create_admin_log(self.request, f"Deleted pack '{name}' (USD {usd})")
         except Exception:
             pass
 
+    @cache_result('PACKAGES', 'active')  # Literal string "active"
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def active_packs(self, request):
         """
@@ -68,6 +89,7 @@ class PackViewSet(StandardResponseMixin, ModelViewSet):
         serializer = self.get_serializer(active_packs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @cache_result('PACKAGES', 'inactive')  # Literal string "inactive"
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def inactive_packs(self, request):
         """

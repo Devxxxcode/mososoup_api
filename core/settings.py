@@ -72,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'users.middleware.UpdateLastConnectionMiddleware',
     'users.middleware.ConfigurableResetMiddleware',
+    'shared.middleware.RequestLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -223,6 +224,16 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'cache_operations': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'request_logger': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
     },
     'handlers': {
         'console': {
@@ -365,3 +376,34 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+"----------------------------------------------- REDIS CACHE SETTINGS  -----------------------------------------------"
+
+# Redis Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+        },
+        'KEY_PREFIX': 'ads_backend',
+        'TIMEOUT': 7200,  # 2 hours default timeout
+    }
+}
+
+# Cache TTL Settings (in seconds)
+CACHE_TTL = {
+    'PRODUCTS': 10800,  # 3 hours
+    'PACKAGES': 10800,  # 3 hours
+    'NOTIFICATIONS': 10800,  # 3 hours
+    'SETTINGS': 14400,  # 4 hours
+    'EVENTS': 14400,  # 4 hours
+    'DEFAULT': 7200,  # 2 hours
+}

@@ -17,6 +17,9 @@ from django.db.models import Q
 from administration.models import Event
 from administration.serializers import EventSerializer
 from shared.helpers import create_admin_log
+from shared.cache_utils import (
+    cache_result, invalidate_product_cache
+)
 
 
 class ProductViewSet(StandardResponseMixin, ModelViewSet):
@@ -28,8 +31,20 @@ class ProductViewSet(StandardResponseMixin, ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
 
+    @cache_result('PRODUCTS', 'all')  # Literal string "all"
+    def list(self, request, *args, **kwargs):
+        """List all products with caching"""
+        return super().list(request, *args, **kwargs)
+
+    @cache_result('PRODUCTS', ['pk'])  # Cache by product ID (pk in kwargs)
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve a specific product with caching"""
+        return super().retrieve(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         product = serializer.save()
+        # Invalidate product cache after creation
+        invalidate_product_cache()
         try:
             create_admin_log(self.request, f"Created product '{product.name}' (USD {product.price})")
         except Exception:
@@ -37,6 +52,8 @@ class ProductViewSet(StandardResponseMixin, ModelViewSet):
 
     def perform_update(self, serializer):
         product = serializer.save()
+        # Invalidate product cache after update
+        invalidate_product_cache()
         try:
             create_admin_log(self.request, f"Updated product '{product.name}' (USD {product.price})")
         except Exception:
@@ -46,6 +63,8 @@ class ProductViewSet(StandardResponseMixin, ModelViewSet):
         name = instance.name
         price = instance.price
         super().perform_destroy(instance)
+        # Invalidate product cache after deletion
+        invalidate_product_cache()
         try:
             create_admin_log(self.request, f"Deleted product '{name}' (USD {price})")
         except Exception:
@@ -63,6 +82,9 @@ class ProductViewSet(StandardResponseMixin, ModelViewSet):
             
             # Delete all products
             deleted_count = Product.objects.all().delete()[0]
+            
+            # Invalidate product cache after bulk deletion
+            invalidate_product_cache()
             
             return self.standard_response(
                 success=True,
@@ -282,3 +304,13 @@ class UserEventViewSet(StandardResponseMixin,ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     http_method_names = ['get']
+
+    @cache_result('EVENTS', 'active')
+    def list(self, request, *args, **kwargs):
+        """List all active events with caching"""
+        return super().list(request, *args, **kwargs)
+
+    @cache_result('EVENTS', ['pk'])
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve a specific event with caching"""
+        return super().retrieve(request, *args, **kwargs)

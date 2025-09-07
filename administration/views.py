@@ -13,6 +13,7 @@ from .models import Settings,Event
 from .serializers import SettingsSerializer,DepositSerializer,SettingsVideoSerializer,EventSerializer,WithdrawalSerializer
 from shared.utils import standard_response as Response
 from shared.helpers import get_settings,create_admin_log
+from shared.cache_utils import cache_result, invalidate_settings_cache, invalidate_events_cache
 from shared.mixins import StandardResponseMixin
 from core.permissions import IsSiteAdmin,IsAdminOrReadOnly
 from finances.models import Deposit,Withdrawal
@@ -56,6 +57,7 @@ class SettingsViewSet(GenericViewSet):
         404: "Settings not found",
     },
 )
+    @cache_result('SETTINGS', 'global')
     def list(self, request, *args, **kwargs):
         """
         Handle GET request for settings.
@@ -87,6 +89,8 @@ class SettingsViewSet(GenericViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=True)  # Partial update enabled
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        # Invalidate settings cache after update
+        invalidate_settings_cache()
         create_admin_log(request,"Updated the site settings")
         return Response(
             success=True,
@@ -136,6 +140,8 @@ class SettingsViewSet(GenericViewSet):
         serializer = SettingsVideoSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        # Invalidate settings cache after update
+        invalidate_settings_cache()
         create_admin_log(request,"Updated the site video for the worker platform")
         return Response(
             success=True,
@@ -341,6 +347,8 @@ class EventViewSet(StandardResponseMixin,ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
+        # Invalidate events cache after creation
+        invalidate_events_cache()
         create_admin_log(
             request=request,
             message="Created a new event",
@@ -349,6 +357,8 @@ class EventViewSet(StandardResponseMixin,ModelViewSet):
     
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
+        # Invalidate events cache after update
+        invalidate_events_cache()
         # Get the event name safely from the response data
         event_name = getattr(response.data, 'name', None)
         if not event_name and hasattr(response.data, 'get'):
@@ -365,6 +375,8 @@ class EventViewSet(StandardResponseMixin,ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         event_name = getattr(instance, 'name', 'Unknown Event') if instance else 'Unknown Event'
+        # Invalidate events cache after deletion
+        invalidate_events_cache()
         create_admin_log(
             request=request,
             message=f"Deleted event with name: {event_name}.",

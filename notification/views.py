@@ -9,6 +9,10 @@ from .models import Notification,AdminLog
 from shared.mixins import StandardResponseMixin
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from shared.cache_utils import (
+    cache_result, invalidate_user_notifications_cache, 
+    invalidate_admin_notifications_cache
+)
 
 
 class UserNotificationViewSet(StandardResponseMixin, ViewSet):
@@ -17,6 +21,7 @@ class UserNotificationViewSet(StandardResponseMixin, ViewSet):
     """
     permission_classes = [IsAuthenticated]
 
+    @cache_result('NOTIFICATIONS', 'user.id')
     def list(self, request):
         """
         List all notifications for the authenticated user.
@@ -38,6 +43,8 @@ class UserNotificationViewSet(StandardResponseMixin, ViewSet):
         serializer = UserNotification.MarkAllNotificationsAsReadSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
+            # Invalidate user notification cache after marking as read
+            invalidate_user_notifications_cache(request.user.id)
             notifications = request.user.notifications.filter(type=Notification.USER).order_by('is_read', '-created_at')
             serializer = UserNotification.NotificationSerializer(notifications, many=True)
             return self.standard_response(
@@ -71,6 +78,8 @@ class UserNotificationViewSet(StandardResponseMixin, ViewSet):
         serializer = UserNotification.MarkNotificationAsReadSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             notification = serializer.save()
+            # Invalidate user notification cache after marking as read
+            invalidate_user_notifications_cache(request.user.id)
             serializer = UserNotification.NotificationSerializer(notification)
 
             return self.standard_response(
@@ -93,6 +102,7 @@ class AdminNotificationViewSet(StandardResponseMixin, ViewSet):
     """
     permission_classes = [IsAuthenticated, IsSiteAdmin]
 
+    @cache_result('NOTIFICATIONS', 'admin')
     def list(self, request):
         """
         List all notifications for all the admins
@@ -114,6 +124,8 @@ class AdminNotificationViewSet(StandardResponseMixin, ViewSet):
         serializer = AdminNotification.MarkAllNotificationsAsReadSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            # Invalidate admin notification cache after marking as read
+            invalidate_admin_notifications_cache()
             notifications = Notification.objects.filter(type=Notification.ADMIN).order_by('is_read', '-created_at')
             serializer = AdminNotification.NotificationSerializer(notifications, many=True)
             return self.standard_response(
@@ -147,6 +159,8 @@ class AdminNotificationViewSet(StandardResponseMixin, ViewSet):
         serializer = AdminNotification.MarkNotificationAsReadSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             notification = serializer.save()
+            # Invalidate admin notification cache after marking as read
+            invalidate_admin_notifications_cache()
             serializer = AdminNotification.NotificationSerializer(notification)
 
             return self.standard_response(
