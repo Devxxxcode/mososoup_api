@@ -143,8 +143,8 @@ class Withdrawal(models.Model):
                 f" before you are able to withdraw."
             )
         total_withdrawal_for_today = cls.total_count_of_today_withdrawal(user)
-        if total_withdrawal_for_today >= max_no_of_withdrawal:
-            return False, f"You have reached the maximum number of withdrawal for today"
+        # if total_withdrawal_for_today >= max_no_of_withdrawal:
+        #     return False, f"You have reached the maximum number of withdrawal for today"
         if not user.check_transactional_password(transactional_password):
             return False, "Incorrect transactional password"
 
