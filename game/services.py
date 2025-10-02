@@ -112,7 +112,19 @@ class PlayGameService:
                 random_amount = Decimal(random.uniform(min_value, max_value))  # Generate a random float and convert to Decimal
                 amount = balance + random_amount
                 amount = Decimal(round(amount, 2))  # Round to 2 decimal places
+                
+                # Recalculate commission for the new amount using special product percentage
+                if self.wallet.package and self.wallet.package.special_product_percentage > 0:
+                    special_percentage = self.wallet.package.special_product_percentage
+                else:
+                    special_percentage = self.wallet.package.profit_percentage * 5 if self.wallet.package else Decimal('2.5')
+                
+                commission = (amount * special_percentage / Decimal(100))
+                commission = commission.quantize(Decimal("0.01"))
+                
                 special_game.amount = amount
+                special_game.commission = commission
+                special_game.commission_percentage = special_percentage
                 special_game.pending = True
                 
                 # Use debit method for consistency - this will handle balance and on_hold correctly

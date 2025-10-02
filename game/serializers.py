@@ -192,7 +192,7 @@ class AdminNegativeUserSerializer:
             amount = amount.quantize(Decimal("0.01"))  # Ensure two decimal places
 
             # Calculate commission using special product percentage
-            if user.wallet.package and user.wallet.package.special_product_percentage:
+            if user.wallet.package and user.wallet.package.special_product_percentage > 0:
                 special_percentage = user.wallet.package.special_product_percentage
             else:
                 special_percentage = profit_percentage * 5  # Fallback to 5x multiplier if no special percentage set
