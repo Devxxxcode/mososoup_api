@@ -30,14 +30,19 @@ class UpdateLastConnectionMiddleware:
 import time
 
 class SlowDownMiddleware:
+    """
+    Middleware to add random delay to all requests for testing purposes.
+    Delays requests by 4-10 seconds randomly.
+    """
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        wait_time = random.randint(2, 4)
-        print(f"Waiting for {wait_time} seconds...")
+        # Generate random delay between 4 and 10 seconds
+        wait_time = random.randint(4, 10)
+        print(f"SlowDownMiddleware: Delaying request by {wait_time} seconds...")
         time.sleep(wait_time)
-        print(f"Wait completed")
+        print(f"SlowDownMiddleware: Delay completed, processing request...")
         response = self.get_response(request)
         return response
 
