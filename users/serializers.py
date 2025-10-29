@@ -789,18 +789,82 @@ class AdminUserUpdateSerializer:
 
     class ResetUserAccount(AdminPasswordMixin,serializers.Serializer):
         user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(),required=True)
+        submission_count = serializers.IntegerField(
+            required=False, 
+            allow_null=True,
+            min_value=0,
+            help_text="Optional: Set the number of submissions today (0 to package daily_missions)"
+        )
+        set_count = serializers.IntegerField(
+            required=False, 
+            allow_null=True,
+            min_value=0,
+            help_text="Optional: Set the number of sets completed today (0 to package number_of_set)"
+        )
+
+        def validate(self, data):
+            """
+            Validate the submission_count and set_count against user's package limits
+            """
+            user = data.get('user')
+            submission_count = data.get('submission_count')
+            set_count = data.get('set_count')
+            
+            if not user:
+                return data
+                
+            # Get user's package
+            if not hasattr(user, 'wallet') or not user.wallet.package:
+                raise serializers.ValidationError("User does not have a valid package assigned.")
+            
+            package = user.wallet.package
+            
+            # Validate submission_count
+            if submission_count is not None:
+                if submission_count > package.daily_missions:
+                    raise serializers.ValidationError({
+                        'submission_count': f"Submission count cannot exceed package daily missions limit ({package.daily_missions})"
+                    })
+            
+            # Validate set_count
+            if set_count is not None:
+                if set_count > package.number_of_set:
+                    raise serializers.ValidationError({
+                        'set_count': f"Set count cannot exceed package number of sets limit ({package.number_of_set})"
+                    })
+            
+            return data
 
         def save(self):
             """
-            Reset User Account
+            Reset User Account with optional custom values
             """
             user = self.validated_data['user']
-            if user.number_of_submission_set_today >=  user.wallet.package.number_of_set:
-                user.number_of_submission_set_today = 0
-            user.number_of_submission_today = 0
-            # user.number_of_submission_set_today = 0
-            # user.today_profit = 0
-            create_user_notification(user,"Account Reset","Your account has been successfully reseted, Procees to make your submissions")
+            submission_count = self.validated_data.get('submission_count')
+            set_count = self.validated_data.get('set_count')
+            
+            # Reset submission count
+            if submission_count is not None:
+                user.number_of_submission_today = submission_count
+            else:
+                # Default behavior: reset to 0
+                user.number_of_submission_today = 0
+            
+            # Reset set count
+            if set_count is not None:
+                user.number_of_submission_set_today = set_count
+            else:
+                # Default behavior: reset to 0 if user has completed their set
+                if user.number_of_submission_set_today >= user.wallet.package.number_of_set:
+                    user.number_of_submission_set_today = 0
+            
+            # Send notification
+            create_user_notification(
+                user,
+                "Account Reset",
+                "Your account has been successfully reset, Proceed to make your submissions"
+            )
+            
             user.save()
             return user
 

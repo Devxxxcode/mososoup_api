@@ -673,13 +673,30 @@ class AdminUserManagementViewSet(StandardResponseMixin,ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'], url_path='reset_user_account')
     def reset_user_account(self,request):
         """
-        Reset the user Account 
+        Reset the user Account with optional custom submission and set counts.
+        
+        Parameters:
+        - user: User ID (required)
+        - submission_count: Optional number of submissions to set (0 to package daily_missions)
+        - set_count: Optional number of sets to set (0 to package number_of_set)
+        
+        If no custom values provided, defaults to resetting submission count to 0
+        and set count to 0 (if user has completed their set).
         """
         serializer =  self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         try:
-            create_admin_log(request, f"Reset account counters for user {user.username}")
+            submission_count = request.data.get('submission_count')
+            set_count = request.data.get('set_count')
+            
+            log_message = f"Reset account counters for user {user.username}"
+            if submission_count is not None:
+                log_message += f" - submission_count: {submission_count}"
+            if set_count is not None:
+                log_message += f" - set_count: {set_count}"
+                
+            create_admin_log(request, log_message)
         except Exception:
             pass
         return self.handle_action_response(user, "User Account has been reset successfully")

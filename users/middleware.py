@@ -143,7 +143,7 @@ class ConfigurableResetMiddleware:
             # Reset other users' fields in bulk
             other_users = User.objects.exclude(id__in=users_with_pending_games)
             other_users.update(
-                number_of_submission_today=0,
+                # number_of_submission_today=0,
                 today_profit=0.00,
                 number_of_submission_set_today=0
             )
