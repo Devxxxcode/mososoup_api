@@ -680,6 +680,8 @@ class AdminUserUpdateSerializer:
         
     class UserProfileRetrieve(UserProfileListSerializer):
         use_payment_method = serializers.SerializerMethodField(read_only=True)
+        daily_missions = serializers.SerializerMethodField(read_only=True)
+        number_of_set = serializers.SerializerMethodField(read_only=True)
 
         class Meta:
             model = User
@@ -698,6 +700,26 @@ class AdminUserUpdateSerializer:
                 method = PaymentMethod.objects.create(user=obj)
 
             return PaymentMethodSerializer(instance=method).data
+
+        def get_daily_missions(self, obj):
+            """Get daily missions from user's package"""
+            try:
+                wallet = obj.wallet
+                if wallet and wallet.package:
+                    return wallet.package.daily_missions
+            except Wallet.DoesNotExist:
+                pass
+            return None
+
+        def get_number_of_set(self, obj):
+            """Get number of sets from user's package"""
+            try:
+                wallet = obj.wallet
+                if wallet and wallet.package:
+                    return wallet.package.number_of_set
+            except Wallet.DoesNotExist:
+                pass
+            return None
 
     class SetUserPack(AdminPasswordMixin, serializers.Serializer):
         user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=True)
