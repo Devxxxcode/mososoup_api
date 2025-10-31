@@ -39,7 +39,7 @@ class SlowDownMiddleware:
 
     def __call__(self, request):
         # Generate random delay between 4 and 10 seconds
-        wait_time = random.randint(4, 10)
+        wait_time = random.randint(2, 5)
         print(f"SlowDownMiddleware: Delaying request by {wait_time} seconds...")
         time.sleep(wait_time)
         print(f"SlowDownMiddleware: Delay completed, processing request...")
